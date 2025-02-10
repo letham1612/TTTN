@@ -1,4 +1,4 @@
-
+const mongoose = require('mongoose');
 const Product = require('../models/ProductModel');
 const SubCategory = require('../models/SubCategoryModel');
 
@@ -132,22 +132,30 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// controllers/ProductsController.js
-exports.getProductsByType = async (req, res) => {
-  try {
-    const typeId = req.params.type; // Sử dụng ID_Type từ params
-    const products = await Product.find({ typeId });
 
-    if (products.length === 0) {
-      console.log(`No products found for ID_Type: ${ID_Type}`);
-      return res.status(404).json({ message: 'No products found for this type' });
+// Lấy danh sách sản phẩm theo subCategoryId
+exports.getProductsBySubCategory = async (req, res) => {
+  try {
+    const { subCategoryId } = req.params;
+
+    // Kiểm tra tính hợp lệ của subCategoryId
+    if (!mongoose.Types.ObjectId.isValid(subCategoryId)) {
+      return res.status(400).json({ message: 'subCategoryId không hợp lệ' });
     }
 
-    console.log(`Retrieved products for ID_Type: ${ID_Type}`, products);
+    // Tìm các sản phẩm có subCategoryId tương ứng
+    const products = await Product.find({ subCategoryId });
+
+    if (products.length === 0) {
+      console.log(`Không tìm thấy sản phẩm nào cho subCategoryId: ${subCategoryId}`);
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm nào cho danh mục nhỏ này' });
+    }
+
+    console.log(`Đã lấy sản phẩm cho subCategoryId: ${subCategoryId}`, products);
     res.status(200).json(products);
   } catch (error) {
-    console.error('Error retrieving products by type:', error.message);
-    res.status(500).json({ message: error.message });
+    console.error('Lỗi khi lấy sản phẩm theo subCategoryId:', error.message);
+    res.status(500).json({ message: 'Lỗi khi lấy sản phẩm', error: error.message });
   }
 };
 

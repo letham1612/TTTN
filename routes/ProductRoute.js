@@ -4,7 +4,8 @@ const router = express.Router();
 const ProductsController = require('../controllers/ProductCtrl');
 // const authMiddleware = require('../middlewares/authMiddleware')
 
-router.get('/type/:type', ProductsController.getProductsByType);
+// Định nghĩa tuyến đường để lấy sản phẩm theo subCategoryId
+router.get('/subcategory/:subCategoryId', ProductsController.getProductsBySubCategory)
 router.post('/', ProductsController.createProduct);
 router.get('/', ProductsController.getAllProducts);
 router.get('/types/:id',  ProductsController.getProductById);
