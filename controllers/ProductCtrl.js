@@ -1,12 +1,16 @@
 
 const Product = require('../models/ProductModel');
-const Type = require('../models/TypeModel');
+const SubCategory = require('../models/SubCategoryModel');
 
 // Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
   try {
-    const { typeId, name, quantityInStock, description, brandId, price, discount, image } = req.body;
-
+    const { subCategoryId, name, quantityInStock, description, brandId, price, discount, image, isFeatured } = req.body;
+    
+    // Kiểm tra nếu thiếu subCategoryId
+    if (!subCategoryId) {
+      return res.status(400).json({ message: "subCategoryId không được để trống" });
+    }
     // Kiểm tra các giá trị đầu vào
     console.log('Received Data:', req.body);
 
@@ -23,15 +27,15 @@ exports.createProduct = async (req, res) => {
     }
 
     // Kiểm tra xem loại sản phẩm có tồn tại không
-    const existingType = await Type.findById(typeId);
-    if (!existingType) {
+    const existingSubCategory = await SubCategory.findById(subCategoryId);
+    if (!existingSubCategory) {
       console.log('ID_Type không tồn tại:', typeId);
       return res.status(400).json({ message: 'Loại sản phẩm không tồn tại, không thể thêm sản phẩm' });
     }
 
     // Tạo sản phẩm mới
     const newProduct = new Product({
-      typeId,
+      subCategoryId,
       name,
       quantityInStock, 
       description, 
@@ -40,6 +44,7 @@ exports.createProduct = async (req, res) => {
       discount: discount || 0,
       promotionPrice,
       image,
+      isFeatured: isFeatured || false,
     });
 
     // Kiểm tra dữ liệu trước khi lưu
@@ -115,7 +120,7 @@ exports.updateProduct = async (req, res) => {
 // Xóa sản phẩm theo ID_Product
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findOneAndDelete(req.params.id); // Sử dụng ID_Product để tìm kiếm
+    const product = await Product.findOneAndDelete ({ _id: req.params.id }); // Sử dụng ID_Product để tìm kiếm
     if (!product) {
       console.log('Product not found for deletion with ID_Product:', req.params.id);
       return res.status(404).json({ message: 'Product not found' });
@@ -144,5 +149,32 @@ exports.getProductsByType = async (req, res) => {
     console.error('Error retrieving products by type:', error.message);
     res.status(500).json({ message: error.message });
   }
+};
+
+// Lọc sản phẩm bán chạy
+exports.getBestSellingProducts = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10; // Giới hạn số sản phẩm trả về
+        const products = await Product.find()
+            .sort({ sold: -1 }) // Sắp xếp theo số lượng bán giảm dần
+            .limit(limit); // Giới hạn số lượng trả về
+
+        res.status(200).json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server', error });
+    }
+};
+
+// Lọc sản phẩm nổi bật
+ exports.getFeaturedProducts = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 10; // Giới hạn số sản phẩm trả về
+        const products = await Product.find({ isFeatured: true }) //  Lọc sản phẩm nổi bật
+            .limit(limit); // Giới hạn số lượng trả về
+
+        res.status(200).json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server', error });
+    }
 };
 

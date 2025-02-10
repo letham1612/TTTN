@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 
 const ProductSchema = new mongoose.Schema({
-    typeId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    subCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubCategory', required: true }, // Liên kết danh mục nhỏ
     name: { type: String, required: true },
     quantityInStock: { type: Number, default: 0 },
     description: { type: String },
@@ -13,6 +13,8 @@ const ProductSchema = new mongoose.Schema({
     image: { type: String },
     brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand' },
     averageRating: { type: Number, default: 0 },
+    //sold: { type: Number, default: 0 }, //  Số lượng đã bán
+    isFeatured: { type: Boolean, default: false }, //  Sản phẩm nổi bật
     reviewCount: { type: Number, default: 0 },
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review'}],
 }, 
