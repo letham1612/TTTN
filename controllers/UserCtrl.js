@@ -1,6 +1,8 @@
 const User = require('../models/UserModel'); // Đảm bảo đường dẫn đúng tới file model
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+
 
 const register = async (req, res) => {
   const { username, email, phoneNumber, password, resPassword } = req.body;
@@ -307,6 +309,111 @@ const getUserGrowth = async (req, res) => {
     }
 };
 
+// Thêm sản phẩm vào danh sách yêu thích
+const addToWishlist = async (req, res) => {
+    try {
+        const { productId } = req.body;
+        const userId = req.user.id;
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ message: 'Invalid userId or productId' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.wishlist.includes(productId)) {
+            return res.status(400).json({ message: 'Product already in wishlist' });
+        }
+
+        user.wishlist.push(productId);
+        await user.save();
+
+        res.status(200).json({ message: 'Product added to wishlist', wishlist: user.wishlist });
+    } catch (error) {
+        console.error('Error adding to wishlist:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Lấy danh sách sản phẩm yêu thích
+exports.getWishlist = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'Invalid userId' });
+        }
+
+        const user = await User.findById(userId).populate('wishlist');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ wishlist: user.wishlist });
+    } catch (error) {
+        console.error('Error fetching wishlist:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+// Lấy danh sách sản phẩm yêu thích
+const getWishlist = async (req, res) => {
+    try {
+        const userId = req.user.id;  // Lấy userId từ token
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid userId" });
+        }
+
+        const user = await User.findById(userId)
+            .populate("wishlist")  // Lấy toàn bộ thông tin sản phẩm
+            .exec();  // Đảm bảo truy vấn được thực hiện đúng
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.status(200).json({ wishlist: user.wishlist });
+    } catch (error) {
+        console.error("Error fetching wishlist:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+
+// Xóa sản phẩm khỏi danh sách yêu thích
+const removeFromWishlist = async (req, res) => {
+    try {
+        const userId = req.user.id; // Lấy userId từ token
+        const { productId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ message: 'Invalid productId' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Kiểm tra xem sản phẩm có trong wishlist không
+        if (!user.wishlist.includes(productId)) {
+            return res.status(400).json({ message: 'Product not found in wishlist' });
+        }
+
+        // Xóa sản phẩm khỏi wishlist
+        user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+        await user.save();
+
+        res.status(200).json({ message: 'Product removed from wishlist', wishlist: user.wishlist });
+    } catch (error) {
+        console.error('Error removing from wishlist:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
 module.exports = {
   register,
   login,
@@ -318,4 +425,7 @@ module.exports = {
   logout,
   getUserGrowth,
   getUserById,
+  addToWishlist,
+  getWishlist,
+  removeFromWishlist
 };

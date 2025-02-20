@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 const Product = require('../models/ProductModel');
 const SubCategory = require('../models/SubCategoryModel');
+const Type = require('../models/TypeModel')
 
 // Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
   try {
-    const { subCategoryId, name, quantityInStock, description, brandId, price, discount, image, isFeatured } = req.body;
+    const { subCategoryId, typeId, name, quantityInStock, description, brandId, price, discount, image, isFeatured } = req.body;
     
     // Kiểm tra nếu thiếu subCategoryId
     if (!subCategoryId) {
@@ -29,6 +30,13 @@ exports.createProduct = async (req, res) => {
     // Kiểm tra xem loại sản phẩm có tồn tại không
     const existingSubCategory = await SubCategory.findById(subCategoryId);
     if (!existingSubCategory) {
+     // console.log('ID_Type không tồn tại:', typeId);
+      return res.status(400).json({ message: 'Loại sản phẩm không tồn tại, không thể thêm sản phẩm' });
+    }
+
+    // Kiểm tra xem danh mục lớn có tồn tại không
+    const existingType = await Type.findById(typeId);
+    if (!existingType) {
       console.log('ID_Type không tồn tại:', typeId);
       return res.status(400).json({ message: 'Loại sản phẩm không tồn tại, không thể thêm sản phẩm' });
     }
@@ -36,6 +44,7 @@ exports.createProduct = async (req, res) => {
     // Tạo sản phẩm mới
     const newProduct = new Product({
       subCategoryId,
+      typeId,
       name,
       quantityInStock, 
       description, 
@@ -144,7 +153,11 @@ exports.getProductsBySubCategory = async (req, res) => {
     }
 
     // Tìm các sản phẩm có subCategoryId tương ứng
-    const products = await Product.find({ subCategoryId });
+    const products = await Product.find({ subCategoryId })
+          .populate('subCategoryId', 'name')
+          .populate('brandId')
+          .populate('typeId', 'name') // liên kết brand
+          .populate('reviews'); //liên kết review
 
     if (products.length === 0) {
       console.log(`Không tìm thấy sản phẩm nào cho subCategoryId: ${subCategoryId}`);
@@ -159,7 +172,71 @@ exports.getProductsBySubCategory = async (req, res) => {
   }
 };
 
-// Lọc sản phẩm bán chạy
+// Lấy danh sách sản phẩm theo typeId
+exports.getProductsByType = async (req, res) => {
+  try {
+      const { typeId } = req.params;
+      console.log('Received Type ID from request:', typeId);
+
+      if (!mongoose.Types.ObjectId.isValid(typeId)) {
+          return res.status(400).json({ message: 'Invalid Type ID' });
+      }
+
+      const products = await Product.find({ typeId })
+          .populate('typeId')
+          .populate('subCategoryId')
+          .populate('brandId') // có liên kết brand
+          .populate('reviews'); // có liên kết reviews
+
+      if (!products.length) {
+          console.log(`No products found for Type ID: ${typeId}`);
+          return res.status(404).json({ message: `Không tìm thấy sản phẩm nào cho Type ID: ${typeId}` });
+      }
+
+      console.log("Sản phẩm tìm thấy:", products);
+      res.status(200).json(products);
+  } catch (error) {
+      console.error('Lỗi khi lấy sản phẩm theo typeId:', error);
+      res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Lấy danh sách sản phẩm theo brand
+exports.getProductsByBrand = async (req, res) => {
+    try {
+        const { brandId } = req.params;
+        console.log('Received Brand ID:', brandId);
+
+        // Kiểm tra brandId có hợp lệ không
+        if (!mongoose.Types.ObjectId.isValid(brandId)) {
+            console.log('Invalid Brand ID:', brandId);
+            return res.status(400).json({ message: 'Invalid Brand ID' });
+        }
+
+        // Truy vấn danh sách sản phẩm theo brandId
+        const products = await Product.find({ brandId })
+            .populate('brandId')
+            .populate('reviews')
+            .populate('subCategoryId', 'name')
+            .populate('typeId', 'name')
+            .exec();
+
+        console.log('Retrieved products:', products);
+
+        if (!products.length) {
+            console.log(`No products found for Brand ID: ${brandId}`);
+            return res.status(404).json({ message: `Không tìm thấy sản phẩm nào cho Brand ID: ${brandId}` });
+        }
+
+        res.status(200).json(products);
+    } catch (error) {
+        console.error('Error fetching products by brandId:', error);
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
+
+
+// Lọc sản phẩm bán chạy  chưa hoàn thành...
 exports.getBestSellingProducts = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10; // Giới hạn số sản phẩm trả về

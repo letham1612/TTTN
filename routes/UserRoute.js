@@ -5,6 +5,7 @@ const {
   authMiddleWare,
   authUserMiddleWare
 } = require("../middlewares/authMiddleware");
+const authenticateToken = require('../middlewares/authMiddleware');
 
 router.post('/register', UserController.register);
 router.post('/login', UserController.login);
@@ -18,5 +19,9 @@ router.get('/', UserController.getUserById);
 router.put('/', UserController.updateUser);
 // Xóa tài khoản người dùng
 router.delete('/:id', UserController.deleteUser);
+// sản phẩm yêu thích của người dùng
+router.post('/wishlist/add', authenticateToken, UserController.addToWishlist);
+router.get('/wishlist', authenticateToken, UserController.getWishlist);
+router.delete('/wishlist/remove', authenticateToken, UserController.removeFromWishlist);
 
 module.exports = router;
