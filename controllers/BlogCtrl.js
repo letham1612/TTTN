@@ -138,7 +138,12 @@ const likeBlog = async (req, res) => {
     }
 
     await blog.save();
-    res.status(200).json({ success: true, data: blog });
+    res.status(200).json({ success: true, data: {
+        blog,
+        totalLikes: blog.likes.length,
+        totalDislikes: blog.dislikes.length,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -168,7 +173,11 @@ const dislikeBlog = async (req, res) => {
     }
 
     await blog.save();
-    res.status(200).json({ success: true, data: blog });
+    res.status(200).json({ success: true, data: {
+        blog,
+        totalLikes: blog.likes.length,
+        totalDislikes: blog.dislikes.length,
+      }, });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

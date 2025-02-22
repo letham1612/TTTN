@@ -6,7 +6,7 @@ const Type = require('../models/TypeModel')
 // Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
   try {
-    const { subCategoryId, typeId, name, quantityInStock, description, brandId, price, discount, image, isFeatured } = req.body;
+    const { subCategoryId, typeId, name, quantityInStock, description, brandId, price, discount, image, isFeatured, ingredients, usageInstructions  } = req.body;
     
     // Kiểm tra nếu thiếu subCategoryId
     if (!subCategoryId) {
@@ -54,6 +54,8 @@ exports.createProduct = async (req, res) => {
       promotionPrice,
       image,
       isFeatured: isFeatured || false,
+      ingredients,
+      usageInstructions,
     });
 
     // Kiểm tra dữ liệu trước khi lưu

@@ -18,6 +18,9 @@ const ProductSchema = new mongoose.Schema({
     isFeatured: { type: Boolean, default: false }, //  Sản phẩm nổi bật
     reviewCount: { type: Number, default: 0 },
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Review'}],
+    // Thêm trường mới
+    ingredients: [{ type: String }], // Danh sách thành phần
+    usageInstructions: { type: String }, // Hướng dẫn sử dụng
 }, 
 { timestamps: true });
 
