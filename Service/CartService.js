@@ -143,7 +143,7 @@ const getCartByUserId = async (userId) => {
   try {
     const cart = await Cart.findOne({ userId }).populate(
       "products.productId",
-      "name prices imageUrl company quantityInStock promotionPrice discount"
+      "name prices image company quantityInStock promotionPrice discount"
     );
     if (!cart) {
       console.log("Không tìm thấy giỏ hàng");
