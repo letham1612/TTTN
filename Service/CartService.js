@@ -80,8 +80,13 @@ const AddProductInCart = async (userId, productId, quantity) => {
   }
 };
 
-const UpdateProductInCart = async (userId, productId, quantity) => {
+const UpdateProductInCart = async (userId, productId, quantity, action) => {
   try {
+    console.log(`User: ${userId}, Product: ${productId}, Action: ${action}`);
+
+    if (!action) {
+      throw { status: 400, message: "Action is required (increase/decrease)" };
+    }  
     // Tìm giỏ hàng của người dùng
     const cart = await Cart.findOne({ userId });
     if (!cart) {
@@ -97,12 +102,36 @@ const UpdateProductInCart = async (userId, productId, quantity) => {
       throw { status: 404, message: "Product not found in cart" };
     }
 
-    // Giảm số lượng sản phẩm xuống 1 đơn vị
-    if (cart.products[productIndex].quantity > 1) {
-      cart.products[productIndex].quantity -= 1;
-    } else {
-      throw { status: 400, message: "Cannot decrease quantity below 1" };
-    }
+     // Kiểm tra sản phẩm có trong database không
+     const productInDB = await Product.findById(productId);
+     if (!productInDB) {
+       console.log("Product not found in database");
+       throw { status: 404, message: "Product not found in database" };
+     }
+ 
+     console.log("Product in DB:", productInDB);
+ 
+     // Xử lý tăng hoặc giảm số lượng
+     if (action === "increase") {
+       if (cart.products[productIndex].quantity < productInDB.quantityInStock) {
+         cart.products[productIndex].quantity += 1;
+       } else {
+         console.log("Not enough stock available");
+         throw { status: 400, message: "Not enough stock available" };
+       }
+     } else if (action === "decrease") {
+       if (cart.products[productIndex].quantity > 1) {
+         cart.products[productIndex].quantity -= 1;
+       } else {
+         console.log("Cannot decrease quantity below 1");
+         throw { status: 400, message: "Cannot decrease quantity below 1" };
+       }
+     } else {
+       console.log("Invalid action:", action);
+       throw { status: 400, message: "Invalid action" };
+     }
+ 
+     console.log("Updated quantity:", cart.products[productIndex].quantity);
 
     // Tính toán lại tổng giá (`totalPrice`)
     cart.totalPrice = await cart.products.reduce(

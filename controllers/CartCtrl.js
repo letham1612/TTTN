@@ -37,16 +37,17 @@ const AddProductInCart = async (req, res) => {
 
 const UpdateProductInCart = async (req, res) => {
   try {
-    const {productId } = req.body;
+    console.log("Request body:", req.body); // Debug xem có `action` không
+    const { productId, action } = req.body;
     const userId = req.user.id;
-    if (!userId || !productId) {
+    if (!userId || !productId || !action) {
       return res.status(400).json({
         status: "ERR",
-        message: "userId and productId are required"
+        message: "userId, productId and action are required"
       });
     }
 
-    const cartData = await CartService.UpdateProductInCart(userId, productId);
+    const cartData = await CartService.UpdateProductInCart(userId, productId,1, action);
 
     res.status(200).json({
       status: "OK",
