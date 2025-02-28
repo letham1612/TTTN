@@ -32,22 +32,52 @@ const createCoupon = async (req, res) => {
   }
 };
 
-const checkCouponValidity = async (couponCode) => {
-  const coupon = await Coupon.findOne({ name: couponCode });
+const checkCouponValidity = async (req, res) => {
+  const { name, orderTotal } = req.body;
 
-  if (!coupon) {
-    throw new Error("Mã giảm giá không hợp lệ");
+  if (!name || !orderTotal) {
+    return res.status(400).json({ message: "Thiếu mã giảm giá hoặc giá trị đơn hàng" });
   }
 
-  if (new Date(coupon.expiry) < new Date()) {
-    throw new Error("Mã giảm giá đã hết hạn");
-  }
+  try {
+    const coupon = await Coupon.findOne({ name });
 
-  if (coupon.stock <= 0) {
-    throw new Error("Mã giảm giá đã hết số lượng");
-  }
+    if (!coupon) {
+      return res.status(404).json({ message: "Mã giảm giá không hợp lệ" });
+    }
 
-  return coupon;
+    const currentDate = new Date();
+    const expiryDate = new Date(coupon.expiry);
+
+    if (expiryDate < currentDate) {
+      return res.status(400).json({ message: "Mã giảm giá đã hết hạn" });
+    }
+
+    if (coupon.stock <= 0) {
+      return res.status(400).json({ message: "Mã giảm giá đã hết số lượng" });
+    }
+
+    // Tách mức giảm giá (%) và số tiền tối thiểu từ description
+    // **Tìm số tiền tối thiểu từ `description`**
+    const match = coupon.description.match(/(\d{1,3}(?:[.,]?\d{3})*)\s*[kK]?\s*VND?/i);
+    const minOrderTotal = match ? parseInt(match[1].replace(/[,.]/g, "")) : 0; // Chuyển về số nguyên
+
+    if (orderTotal < minOrderTotal) {
+      return res.status(400).json({
+        message: `Mã giảm giá chỉ áp dụng cho đơn hàng từ ${minOrderTotal.toLocaleString()} VND`,
+      });
+    }
+
+    return res.json({
+      discount: coupon.discount,
+      expiry: coupon.expiry,
+      stock: coupon.stock,
+      status: coupon.stock > 0 ? "Còn mã giảm giá" : "Hết mã giảm giá",
+      message: `Giảm ${coupon.discount}% cho đơn hàng từ ${minOrderTotal.toLocaleString()} VND`,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
 };
 
 // Lấy danh sách mã giảm giá
