@@ -89,13 +89,16 @@ exports.updateType = async (req, res) => {
 // Xóa loại sản phẩm
 exports.deleteType = async (req, res) => {
   try {
-    const Types = await Type.findOneAndDelete(req.params.id); 
+    const typeId = req.params.id;
+
+    // Xóa loại sản phẩm theo ID
+    const deletedType = await Type.findOneAndDelete({ _id: typeId });
     if (!Types) {
       console.log('Type not found for deletion with ID:', req.params.id);
       return res.status(404).json({ message: 'Type not found' });
     }
     console.log('Type deleted:', Types);
-    res.status(200).json({ message: 'Xóa loai sản phẩm thành công', Types }); 
+    res.status(200).json({ message: 'Xóa loại sản phẩm thành công', deletedType, }); 
   } catch (error) {
     console.error('Error deleting Type:', error.message);
     res.status(500).json({ message: error.message });

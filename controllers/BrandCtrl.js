@@ -59,27 +59,25 @@ const updateBrand = async (req, res) => {
       res.status(500).json({ message: 'Lỗi khi cập nhật thương hiệu', error: error.message });
     }
   };
-const deleteBrand = async (req, res) => {
+  const deleteBrand = async (req, res) => {
     try {
-      const brandId = req.params.id;
-  
-      // Kiểm tra xem thương hiệu có tồn tại không
-      const brandToDelete = await Brand.findById(brandId);
-      if (!brandToDelete) {
-        return res.status(404).json({ message: 'Thương hiệu không tồn tại' });
-      }
-  
-      // Xóa thương hiệu
-      await brandToDelete.remove();
-  
-      res.status(200).json({
-        message: 'Xóa thương hiệu thành công',
-      });
+        const brandId = req.params.id;
+
+        const deletedBrand = await Brand.findByIdAndDelete(brandId);
+        if (!deletedBrand) {
+            return res.status(404).json({ message: 'Thương hiệu không tồn tại' });
+        }
+
+        res.status(200).json({
+            message: 'Xóa thương hiệu thành công',
+            deletedBrand, // Trả về thông tin thương hiệu bị xóa
+        });
     } catch (error) {
-      console.error('Lỗi khi xóa thương hiệu:', error.message);
-      res.status(500).json({ message: 'Lỗi khi xóa thương hiệu', error: error.message });
+        console.error('Lỗi khi xóa thương hiệu:', error.message);
+        res.status(500).json({ message: 'Lỗi khi xóa thương hiệu', error: error.message });
     }
-  };
+};
+
 const getBrand = async (req, res) => {
     try {
       const brandId = req.params.id;
