@@ -54,7 +54,7 @@ exports.getSubCategoryById = async (req, res) => {
 exports.getSubCategoriesByType = async (req, res) => {
     try {
         const { typeId } = req.params;
-        const subCategories = await SubCategory.find({ typeId }).populate('typeId', 'name');
+        const subCategories = await SubCategory.find({ typeId }).populate('typeId', 'Type_name');
 
         if (subCategories.length === 0) {
             return res.status(404).json({ message: 'Không có danh mục nhỏ nào cho danh mục lớn này' });
