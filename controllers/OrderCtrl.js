@@ -132,6 +132,27 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+//Admin xác nhận đơn hàng
+const confirmOrder = async (req, res) => {
+  const { orderId } = req.body;
+
+  try {
+    const confirmedOrder = await OrderService.confirmOrder(orderId);
+    res.status(200).json({
+      status: "OK",
+      message: "Order confirmed successfully",
+      data: confirmedOrder
+    });
+  } catch (error) {
+    console.error("Error in confirmOrderController:", error);
+    res.status(error.status || 500).json({
+      status: "ERR",
+      message: error.message || "Internal server error"
+    });
+  }
+};
+
+//Admin xác nhận đơn hàng đã qua đơn vị vận chuyển
 const shipOrder = async (req, res) => {
   const { orderId } = req.body;
 
@@ -151,6 +172,7 @@ const shipOrder = async (req, res) => {
   }
 };
 
+// Người dùng xác nhận đã nhận hàng
 const deliverOrder = async (req, res) => {
   const { orderId } = req.body;
 
@@ -169,31 +191,35 @@ const deliverOrder = async (req, res) => {
     });
   }
 };
-const getOrdersByStatusAndDateController = async (req, res) => {
-  try {
-    const { status, date, timePeriod } = req.body; // Lấy thông tin từ body (POST)
-    console.log({ status, date, timePeriod });
 
-    // Kiểm tra timePeriod hợp lệ
-    if (!["day", "week", "month"].includes(timePeriod)) {
-      return res.status(400).json({
-        message:
-          "Thời gian không hợp lệ. Vui lòng chọn 'day', 'week', hoặc 'month'."
-      });
+const confirmPendingDeliveries = async (req, res) => {
+  try {
+    const result = await OrderService.autoConfirmDelivery();
+    res.status(200).json({
+      status: "OK",
+      message: result.message
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "ERR",
+      message: "Lỗi khi tự động xác nhận đơn hàng"
+    });
+  }
+};
+
+const listOrdersByTime = async (req, res) => {
+  try {
+    const { status, timePeriod, date } = req.body; // Nhận params từ request
+
+    if (!status || !timePeriod || !date) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Gọi service để lấy đơn hàng
-    const orders = await OrderService.getOrdersByTimePeriod(
-      status,
-      timePeriod,
-      date
-    );
-
-    // Trả về kết quả
-    return res.status(200).json(orders);
+    const result = await OrderService.getOrdersWithinPeriod(status, timePeriod, date);
+    return res.status(200).json(result);
   } catch (error) {
-    console.error("Lỗi trong getOrdersByStatusAndDateController:", error);
-    return res.status(500).json({ message: "Lỗi server" });
+    console.error("Error in getOrders:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 const getRevenue = async (req, res) => {
@@ -214,8 +240,10 @@ module.exports = {
   createOrder,
   getOrderById,
   cancelOrder,
+  confirmOrder,
   shipOrder,
   deliverOrder,
+  confirmPendingDeliveries,
   getRevenue,
-  getOrdersByStatusAndDateController
+  listOrdersByTime
 };

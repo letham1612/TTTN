@@ -12,12 +12,20 @@ router.get("/", authenticateToken, orderController.getAllOrdersByUser);
 
 router.put("/cancel", authenticateToken, orderController.cancelOrder);
 
-// Route để admin xác nhận đơn hàng (chuyển từ Pending sang Shipped)
-router.put("/ship", orderController.shipOrder);
+// Route để admin xác nhận đơn hàng (chuyển từ Pending sang Confirm)
+router.post("/confirm", orderController.confirmOrder);
+
+// Route để admin xác nhận đơn hàng (chuyển từ Confirm sang Shipped)
+router.put("/shipOrder", orderController.shipOrder);
 
 // Route để người dùng xác nhận đã nhận hàng (chuyển từ Shipped sang Delivered)
-router.put("/deliver", orderController.deliverOrder);
+router.put("/deliver", authenticateToken, orderController.deliverOrder);
 
-router.post("/getstatus", orderController.getOrdersByStatusAndDateController);
+// Route API để chạy xác nhận đơn hàng tự động
+router.post("/auto-confirm-delivery", orderController.confirmPendingDeliveries);
+
+//Định nghĩa route để lấy đơn hàng theo trạng thái và thời gian
+router.post("/orders-by-time", orderController.listOrdersByTime);
+
 router.get("/total-revenue", orderController.getRevenue);
 module.exports = router;

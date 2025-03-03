@@ -164,9 +164,16 @@ const cancelOrder = async (orderId) => {
       throw { status: 404, message: "Order not found" };
     }
 
-    if (order.status === "Delivered" || order.status === "Cancelled") {
-      throw { status: 400, message: "Order already delivered or cancelled" };
+    // Không thể hủy đơn hàng nếu đã giao, đã hủy hoặc đã được gửi đi
+    if (["Delivered", "Cancelled", "Shipped"].includes(order.status)) {
+      throw { status: 400, message: "Cannot cancel an order that is already shipped, delivered, or cancelled" };
     }
+
+    // Nếu đơn hàng đã được xác nhận và thanh toán, có thể yêu cầu hỗ trợ thay vì hủy trực tiếp
+    if (order.status === "Confirm" && order.isPaid) {
+      throw { status: 400, message: "Order is already paid and confirmed. Please contact support for cancellation" };
+    }
+
 
     order.status = "Cancelled";
 
@@ -182,7 +189,7 @@ const cancelOrder = async (orderId) => {
   }
 };
 
-const shipOrder = async (orderId) => {
+const confirmOrder = async (orderId) => {
   try {
     const order = await Order.findById(orderId);
     if (!order) {
@@ -190,8 +197,31 @@ const shipOrder = async (orderId) => {
     }
 
     if (order.status !== "Pending") {
-      throw { status: 400, message: "Order is not in Pending status" };
+      throw { status: 400, message: "Only pending orders can be confirmed" };
     }
+
+    order.status = "Confirmed";
+    order.updatedAt = new Date();
+    
+    await order.save();
+    return order;
+  } catch (error) {
+    console.error("Error in confirmOrder service:", error);
+    throw { status: error.status || 500, message: error.message || "Internal server error" };
+  }
+};
+
+const shipOrder = async (orderId) => {
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw { status: 404, message: "Order not found" };
+    }
+
+   // Chỉ cho phép chuyển sang "Shipped" nếu đơn hàng đã được xác nhận
+   if (order.status !== "Confirmed") {
+    throw { status: 400, message: "Order must be confirmed before shipping" };
+  }
 
     order.status = "Shipped";
 
@@ -214,8 +244,13 @@ const deliverOrder = async (orderId) => {
       throw { status: 404, message: "Order not found" };
     }
 
+    // Chỉ cho phép giao thành công nếu đơn hàng đã được vận chuyển và đã thanh toán
     if (order.status !== "Shipped") {
-      throw { status: 400, message: "Order is not in Shipped status" };
+      throw { status: 400, message: "Order must be in Shipped status before delivery" };
+    }
+
+    if (!order.isPaid) {
+      throw { status: 400, message: "Order must be paid before delivery confirmation" };
     }
 
     order.status = "Delivered";
@@ -232,6 +267,37 @@ const deliverOrder = async (orderId) => {
   }
 };
 
+const autoConfirmDelivery = async () => {
+  try {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    // Tìm tất cả đơn hàng có status "Shipped" và đã qua 3 ngày
+    const ordersToUpdate = await Order.find({
+      status: "Shipped",
+      shippedAt: { $lte: threeDaysAgo }
+    });
+
+    if (ordersToUpdate.length === 0) {
+      console.log("Không có đơn hàng nào cần cập nhật.");
+      return { message: "Không có đơn hàng nào cần cập nhật." };
+    }
+
+    // Cập nhật tất cả đơn hàng quá hạn thành "Delivered"
+    await Order.updateMany(
+      { _id: { $in: ordersToUpdate.map(order => order._id) } },
+      { $set: { status: "Delivered" } }
+    );
+
+    console.log(` Đã tự động xác nhận ${ordersToUpdate.length} đơn hàng đã giao thành công.`);
+    return { message: `Đã xác nhận ${ordersToUpdate.length} đơn hàng đã giao.` };
+  } catch (error) {
+    console.error(" Lỗi khi tự động xác nhận đơn hàng:", error);
+    throw error;
+  }
+};
+
+
 const updatePaymentStatus = async (orderId, isSuccess) => {
   console.log(isSuccess);
 
@@ -241,7 +307,7 @@ const updatePaymentStatus = async (orderId, isSuccess) => {
       return { success: false, message: "Không tìm thấy đơn hàng" };
     }
 
-    if (isSuccess) {
+    if (isSuccess && !order.isPaid) {
       order.isPaid = true;
     }
     await order.save();
@@ -318,64 +384,22 @@ const handleVNPayCallback = async (req, res) => {
   }
 };
 
-const getOrdersByTimePeriod = async (status, timePeriod, date) => {
+const { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } = require("date-fns");
+
+const getOrdersWithinPeriod = async (status, timePeriod, date) => {
   try {
-    let startUtcDate, endUtcDate;
     const selectedDate = new Date(date);
+    let startUtcDate, endUtcDate;
 
     if (timePeriod === "day") {
-      startUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        0,
-        0,
-        0
-      );
-      endUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        23,
-        59,
-        59
-      );
+      startUtcDate = startOfDay(selectedDate);
+      endUtcDate = endOfDay(selectedDate);
     } else if (timePeriod === "week") {
-      const dayOfWeek = selectedDate.getDay();
-      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const diffToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-
-      startUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate() + diffToMonday,
-        0,
-        0,
-        0
-      );
-
-      endUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate() + diffToSunday,
-        23,
-        59,
-        59
-      );
+      startUtcDate = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Tuần bắt đầu từ Thứ Hai
+      endUtcDate = endOfWeek(selectedDate, { weekStartsOn: 1 });
     } else if (timePeriod === "month") {
-      startUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        1
-      );
-      endUtcDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth() + 1,
-        0,
-        23,
-        59,
-        59
-      );
+      startUtcDate = startOfMonth(selectedDate);
+      endUtcDate = endOfMonth(selectedDate);
     } else {
       throw new Error("Invalid time period. Use 'day', 'week', or 'month'.");
     }
@@ -385,31 +409,9 @@ const getOrdersByTimePeriod = async (status, timePeriod, date) => {
       createdAt: { $gte: startUtcDate, $lte: endUtcDate }
     }).populate("products.productId");
 
-    const ordersWithVietnamTime = orders.map((order) => ({
-      ...order.toObject(),
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    }));
-
-    const totalProducts = orders.reduce((sum, order) => {
-      return (
-        sum +
-        order.products.reduce((productSum, product) => {
-          return productSum + product.quantity;
-        }, 0)
-      );
-    }, 0);
-    const totalOrders = orders.length;
-    const totalAmount = orders.reduce(
-      (sum, order) => sum + order.orderTotal,
-      0
-    );
-
     return {
-      orders: ordersWithVietnamTime,
-      totalProducts,
-      totalAmount,
-      totalOrders,
+      orders,
+      totalOrders: orders.length,
       startDate: startUtcDate,
       endDate: endUtcDate
     };
@@ -418,6 +420,7 @@ const getOrdersByTimePeriod = async (status, timePeriod, date) => {
     throw error;
   }
 };
+
 const getTotalRevenue = async () => {
   try {
     const deliveredOrders = await Order.find({ status: "Delivered" });
@@ -446,10 +449,12 @@ module.exports = {
   getAllOrders,
   getOrderById,
   cancelOrder,
+  confirmOrder,
   shipOrder,
   deliverOrder,
+  autoConfirmDelivery,
   handleVNPayCallback,
   updatePaymentStatus,
-  getOrdersByTimePeriod,
+  getOrdersWithinPeriod,
   getTotalRevenue
 };

@@ -43,11 +43,13 @@ const orderSchema = new mongoose.Schema(
     orderTotal: { type: Number },
     status: {
       type: String,
-      enum: ["Pending", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Pending","Confirmed", "Shipped", "Delivered", "Cancelled"],
       default: "Pending"
     },
-    paymentResult: { type: String, enum: ["success", "failure", "pending"], default: "pending" }
+    paymentResult: { type: String, enum: ["success", "failure", "pending"], default: "pending" },
 
+  // Thêm shippedAt để lưu thời gian đơn hàng được chuyển sang "Shipped"
+  shippedAt: { type: Date }
   },
   { timestamps: true }
 );
