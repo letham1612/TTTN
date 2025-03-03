@@ -6,7 +6,7 @@ const createOrder = async (req, res) => {
     const {
       cartId,
       shippingAddress,
-      productId,
+      productList,
       name,
       phone,
       email,
@@ -14,15 +14,14 @@ const createOrder = async (req, res) => {
     } = req.body;
     const userId = req.user.id; 
 
-    const selectedProductId = Array.isArray(productId)
-      ? productId
-      : [productId];
-
+    const selectedProductId = Array.isArray(productList)
+    ? productList.map(item => item.productId)  // Chỉ lấy productId từ productList
+    : [productList.productId]; 
     const newOrder = await OrderService.createOrder(
       userId,
       cartId,
       shippingAddress,
-      selectedProductId,
+      productList,
       name,
       phone,
       email,
