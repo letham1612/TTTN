@@ -112,7 +112,7 @@ exports.getProductById = async (req, res) => {
 
     // Lấy danh sách đánh giá của sản phẩm
     const reviews = await Review.find({ productId: req.params.id })
-      .populate({ path: 'userId', select: 'name' }) // Lấy thông tin người dùng
+      .populate({ path: 'userId', select: 'username' }) // Lấy thông tin người dùng
       .sort({ createdAt: -1 }); // Sắp xếp theo thời gian gần nhất
 
     // Lấy tổng số lượng đánh giá
