@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../models/ProductModel');
 const SubCategory = require('../models/SubCategoryModel');
 const Type = require('../models/TypeModel')
+const Review = require('../models/ReviewModel');
 
 // Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
@@ -88,22 +89,52 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// Lấy sản phẩm theo ID_Product
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findOne({_id:req.params.id} ).populate('reviews');
+    const product = await Product.findOne({ _id: req.params.id })
+      .populate({
+        path: 'brandId',
+        select: 'title'
+      })
+      .populate({
+        path: 'typeId',
+        select: 'Type_name'
+      })
+      .populate({
+        path: 'subCategoryId',
+        select: 'name'
+      });
 
     if (!product) {
-      console.log('Product not found with ID_Product:', req.params.id);
+      console.log('Product not found with ID:', req.params.id);
       return res.status(404).json({ message: 'Product not found' });
     }
-    console.log('Retrieved product:', product);
-    res.status(200).json(product);
+
+    // Lấy danh sách đánh giá của sản phẩm
+    const reviews = await Review.find({ productId: req.params.id })
+      .populate({ path: 'userId', select: 'name' }) // Lấy thông tin người dùng
+      .sort({ createdAt: -1 }); // Sắp xếp theo thời gian gần nhất
+
+    // Lấy tổng số lượng đánh giá
+    const totalReviews = await Review.getTotalReviews(req.params.id);
+
+    // Lấy điểm trung bình đánh giá
+    const averageRating = await Review.getAverageRating(req.params.id);
+
+    // Cập nhật vào JSON phản hồi
+    res.status(200).json({
+      ...product.toObject(),
+      reviews, // Danh sách đánh giá
+      totalReviews, // Tổng số lượng đánh giá
+      averageRating, // Điểm trung bình đánh giá
+    });
   } catch (error) {
     console.error('Error retrieving product:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
+
+
 
 // Cập nhật sản phẩm theo ID_Product
 exports.updateProduct = async (req, res) => {
