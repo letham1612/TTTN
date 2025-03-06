@@ -116,6 +116,8 @@ const createOrder = async (
     throw error;
   }
 };
+
+//Lấy cho user
 const getAllOrdersByUser = async (userId) => {
   try {
     const orders = await Order.find({ userId }).populate("products.productId");
@@ -126,6 +128,7 @@ const getAllOrdersByUser = async (userId) => {
   }
 };
 
+//lấy cho Admin
 const getAllOrders = async () => {
   try {
     const orders = await Order.find().populate("products.productId");
@@ -189,6 +192,7 @@ const cancelOrder = async (orderId) => {
   }
 };
 
+//Admin xác nhận đơn hàng đang pending
 const confirmOrder = async (orderId) => {
   try {
     const order = await Order.findById(orderId);
@@ -211,6 +215,7 @@ const confirmOrder = async (orderId) => {
   }
 };
 
+//Admin xác nhận từ confirmed sang bên vận chuyển 
 const shipOrder = async (orderId) => {
   try {
     const order = await Order.findById(orderId);
@@ -237,6 +242,7 @@ const shipOrder = async (orderId) => {
   }
 };
 
+//User xác nhận đã nhận được hàng
 const deliverOrder = async (orderId) => {
   try {
     const order = await Order.findById(orderId);
@@ -267,6 +273,7 @@ const deliverOrder = async (orderId) => {
   }
 };
 
+//Tự động chuyển sang Delivered nếu sau 3 ngày giao hàng thành công
 const autoConfirmDelivery = async () => {
   try {
     const threeDaysAgo = new Date();
@@ -383,7 +390,7 @@ const handleVNPayCallback = async (req, res) => {
     });
   }
 };
-
+//lấy đơn hàng theo trạng thái: theo ngày, theo tuần, theo tháng
 const { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } = require("date-fns");
 
 const getOrdersWithinPeriod = async (status, timePeriod, date) => {
@@ -421,7 +428,7 @@ const getOrdersWithinPeriod = async (status, timePeriod, date) => {
   }
 };
 
-const getTotalRevenue = async () => {
+const getRevenue = async () => {
   try {
     const deliveredOrders = await Order.find({ status: "Delivered" });
 
@@ -456,5 +463,5 @@ module.exports = {
   handleVNPayCallback,
   updatePaymentStatus,
   getOrdersWithinPeriod,
-  getTotalRevenue
+  getRevenue
 };

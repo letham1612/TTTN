@@ -223,7 +223,7 @@ const listOrdersByTime = async (req, res) => {
 };
 const getRevenue = async (req, res) => {
   try {
-    const revenueData = await OrderService.getTotalRevenue();
+    const revenueData = await OrderService.getRevenue();
     return res.status(200).json(revenueData);
   } catch (error) {
     return res.status(500).json({

@@ -6,6 +6,7 @@ const authenticateToken = require('../middlewares/authMiddleware');
 router.get("/getAll", orderController.getAllOrders);
 router.post("/", authenticateToken, orderController.createOrder);
 
+router.get("/revenue", orderController.getRevenue);
 router.get("/:orderId", authenticateToken, orderController.getOrderById);
 
 router.get("/", authenticateToken, orderController.getAllOrdersByUser);
@@ -27,5 +28,5 @@ router.post("/auto-confirm-delivery", orderController.confirmPendingDeliveries);
 //Định nghĩa route để lấy đơn hàng theo trạng thái và thời gian
 router.post("/orders-by-time", orderController.listOrdersByTime);
 
-router.get("/total-revenue", orderController.getRevenue);
+
 module.exports = router;
