@@ -69,3 +69,35 @@ exports.getReviewsByProduct = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error });
   }
 };
+
+// Phản hồi đánh giá
+exports.respondToReview = async (req, res) => {
+  try {
+    const { responseText } = req.body;
+    const review = await Review.respondToReview(req.params.reviewId, responseText);
+    if (!review) return res.status(404).json({ error: 'Review không tồn tại' });
+    res.json(review);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Lấy đánh giá trung bình
+exports.getAverageRating = async (req, res) => {
+  try {
+    const avgRating = await Review.getAverageRating(req.params.productId);
+    res.json({ averageRating: avgRating });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Lấy tổng số lượng đánh giá
+exports.getTotalReviews = async (req, res) => {
+  try {
+    const totalReviews = await Review.getTotalReviews(req.params.productId);
+    res.json({ totalReviews });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
