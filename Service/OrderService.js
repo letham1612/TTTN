@@ -250,17 +250,18 @@ const deliverOrder = async (orderId) => {
       throw { status: 404, message: "Order not found" };
     }
 
-    // Chỉ cho phép giao thành công nếu đơn hàng đã được vận chuyển và đã thanh toán
+    // Chỉ cho phép xác nhận khi đơn hàng đang ở trạng thái "Shipped"
     if (order.status !== "Shipped") {
-      throw { status: 400, message: "Order must be in Shipped status before delivery" };
+      throw { status: 400, message: "Order must be in Shipped status before delivery confirmation" };
     }
 
-    if (!order.isPaid) {
-      throw { status: 400, message: "Order must be paid before delivery confirmation" };
+    // Kiểm tra paymentResult (thay vì isPaid)
+    if (order.paymentResult !== "success") {
+      throw { status: 400, message: "Order must be paid successfully before delivery confirmation" };
     }
 
+    // Cập nhật trạng thái giao hàng
     order.status = "Delivered";
-    order.isPaid = true;
     await order.save();
 
     return order;
