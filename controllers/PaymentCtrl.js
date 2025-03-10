@@ -68,6 +68,7 @@ const createPayment = async (req, res) => {
         const payment = new Payment({
             userId,
             orderId: objectOrderId,
+            momoOrderId,
             partnerCode,
             requestId,
             amount,
@@ -78,8 +79,11 @@ const createPayment = async (req, res) => {
         });
         await payment.save();
 
-        // Cập nhật trạng thái thanh toán trong đơn hàng
-        await Order.findByIdAndUpdate(objectOrderId, { paymentResult: "pending" });
+        // Cập nhật đơn hàng với momoOrderId
+        await Order.findByIdAndUpdate(objectOrderId, {
+            momoOrderId, //  Thêm orderId của MoMo vào đơn hàng
+            paymentResult: "pending",
+        });
 
         res.status(200).json(paymentResponse.data);
     } catch (error) {
@@ -88,4 +92,60 @@ const createPayment = async (req, res) => {
     }
 };
 
-module.exports = { createPayment };
+const handleMomoIPN = async (req, res) => {
+    try {
+        const { orderId, requestId, amount, resultCode, message, transId } = req.body;
+
+        console.log("MoMo Callback Data:", req.body);
+
+
+        // Xác định trạng thái thanh toán
+        const paymentStatus = resultCode === 0 ? "success" : "failed";
+        const orderStatus = resultCode === 0 ? "Completed" : "Pending";  // Nếu thanh toán thất bại, giữ nguyên trạng thái
+
+        // Tìm payment theo requestId
+        const payment = await Payment.findOneAndUpdate(
+            { requestId },
+            { 
+                paymentResult: paymentStatus,
+                transactionId: transId,
+                updatedAt: new Date()  // ✅ Cập nhật thời gian xử lý
+            },
+            { new: true }
+        );
+
+        if (!payment) {
+            console.warn(" Không tìm thấy giao dịch MoMo với requestId:", requestId);
+            return res.status(404).json({ message: "Payment not found" });
+        }
+
+        // Tìm đơn hàng dựa vào orderId trong Payment
+        const order = await Order.findOneAndUpdate(
+            { _id: payment.orderId },  
+            { 
+                paymentResult:  paymentStatus,
+                //status: orderStatus,
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!order) {
+            console.warn("Không tìm thấy đơn hàng với _id:", payment.orderId);
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        console.log("✅ Cập nhật đơn hàng thành công:", order);
+
+        // ✅ Trả về kết quả phù hợp
+        if (resultCode === 0) {
+            return res.status(200).json({ message: "Payment successful" });
+        } else {
+            return res.status(400).json({ message: "Payment failed", error: message });
+        }
+    } catch (error) {
+        console.error(" MoMo IPN Handling Error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+module.exports = { createPayment, handleMomoIPN };
