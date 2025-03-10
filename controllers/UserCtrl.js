@@ -2,55 +2,101 @@ const User = require('../models/UserModel'); // Đảm bảo đường dẫn đ�
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const sendMail = require("../config/mailConfig"); 
+const sendMail = require("../utils/mailer"); 
+const Otp = require("../models/OTPModel"); // Đảm bảo đã import model OTP
 
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const register = async (req, res) => {
   const { username, email, phoneNumber, password, resPassword } = req.body;
 
   if (password !== resPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
+    return res.status(400).json({ message: "Passwords do not match" });
   }
 
   try {
-      const userExists = await User.findOne({ $or: [{ email }, { username }] });
-      if (userExists) {
-          return res.status(400).json({ message: 'Username or Email already exists' });
-      }
+    // Kiểm tra user đã tồn tại
+    const userExists = await User.findOne({ $or: [{ email }, { username }] });
+    if (userExists) {
+      return res.status(400).json({ message: "Username or Email already exists" });
+    }
 
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
+    const saltRounds = 10;
 
-      const newUser = new User({
-          username,
-          email,
-          phoneNumber,
-          password: hashedPassword
-      });
+    // Mã hóa mật khẩu
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      const savedUser = await newUser.save();
-       
-    //  Gửi email xác nhận đăng ký
-    await sendMail(email, "Đăng ký thành công!", 
-        `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2 style="color: #2c3e50;">Chào mừng, ${username}! 👋</h2>
-        <p style="font-size: 16px;">Chúc mừng bạn đã đăng ký tài khoản thành công! 🎉</p>
-        <p style="font-size: 16px;">Hãy khám phá ứng dụng của chúng tôi và tận hưởng những trải nghiệm tuyệt vời.</p>
-        <br>
-        <p style="font-size: 14px; color: #888;">Nếu bạn có bất kỳ thắc mắc nào, hãy liên hệ với chúng tôi.</p>
-        <p style="font-size: 14px; color: #888;">Trân trọng,</p>
-        <p style="font-size: 14px; font-weight: bold; color: #2c3e50;">Đội ngũ hỗ trợ YourApp</p>
+    // Tạo user nhưng chưa kích hoạt
+    const newUser = new User({
+      username,
+      email,
+      phoneNumber,
+      password: hashedPassword,
+      isVerified: false, // Chưa kích hoạt
+    });
+
+    await newUser.save();
+
+    // Tạo OTP ngẫu nhiên
+    const otp = generateOtp();
+    
+    // Băm OTP trước khi lưu vào database
+    const hashedOtp = await bcrypt.hash(otp, saltRounds); 
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // Hết hạn sau 5 phút
+
+    await Otp.create({ email, otp: hashedOtp, expiresAt: otpExpiry });
+
+    // Gửi OTP qua email (gửi OTP gốc, không phải OTP đã băm)
+await sendMail(email, "Xác nhận đăng ký tài khoản", 
+    `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #2c3e50;">Chào mừng, ${username}!</h2>
+      <p>Chúng tôi rất vui khi bạn đăng ký tài khoản tại Beautique.</p>
+      <p>Mã OTP của bạn là: <strong style="font-size: 18px; color: #e74c3c;">${otp}</strong></p>
+      <p>Vui lòng nhập mã OTP này để hoàn tất đăng ký.</p>
+      <p><strong>Lưu ý:</strong> Mã OTP sẽ hết hạn sau <strong>5 phút</strong>.</p>
+      <br>
+      <p>Chúc bạn một ngày tốt lành! 💖</p>
     </div>`);
-  
-        // Trả về kết quả đăng ký thành công
-        res.status(201).json({
-          message: "User registered successfully. Check your email!",
-          user: savedUser,
-        });
-  
+    res.status(201).json({ message: "OTP sent to email. Please verify your account." });
+
   } catch (err) {
-      res.status(500).json({ message: 'Error registering user', error: err.message });
+    res.status(500).json({ message: "Error registering user", error: err.message });
   }
+};
+const verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+
+    try {
+        // Tìm OTP theo email
+        const otpRecord = await Otp.findOne({ email });
+
+        if (!otpRecord) {
+            return res.status(400).json({ message: "OTP không tồn tại hoặc đã hết hạn" });
+        }
+
+        // Kiểm tra thời gian hết hạn
+        if (otpRecord.expiresAt < new Date()) {
+            return res.status(400).json({ message: "OTP đã hết hạn" });
+        }
+
+        // So sánh OTP nhập vào với OTP đã băm trong database
+        const isMatch = await bcrypt.compare(otp, otpRecord.otp);
+
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        // Nếu OTP đúng, cập nhật trạng thái tài khoản
+        await User.updateOne({ email }, { isVerified: true });
+
+        // Xóa OTP khỏi database sau khi xác thực thành công
+        await Otp.deleteOne({ email });
+
+        res.status(200).json({ message: "Xác thực thành công" });
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi xác thực OTP", error: err.message });
+    }
 };
 
 
@@ -504,6 +550,7 @@ const removeFromWishlist = async (req, res) => {
 
 module.exports = {
   register,
+  verifyOtp,
   login,
   googleAuth,
   facebookAuth,

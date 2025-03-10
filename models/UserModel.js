@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema({
     address: { type: String },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], //Danh sách sản phẩm yêu thích
     isadmin: {type: Boolean, default: false, require: true},
+    isVerified: { type: Boolean, default: false },// Đánh dấu tài khoản đã xác thực hay chưa
     refreshToken: { type: String }
     }, 
 { timestamps: true });

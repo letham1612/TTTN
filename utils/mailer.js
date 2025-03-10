@@ -31,4 +31,3 @@ const sendMail = async (to, subject, htmlContent) => {
 };
 
 module.exports = sendMail; //  Export đúng
-

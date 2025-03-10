@@ -8,6 +8,7 @@ const {
 const authenticateToken = require('../middlewares/authMiddleware');
 
 router.post('/register', UserController.register);
+router.post("/verify-otp", UserController.verifyOtp); // Xác thực OTP
 router.post('/login', UserController.login);
 router.post('/changePassword', UserController.changePassword);
 router.post('/logout',UserController.logout);
