@@ -2,6 +2,7 @@ const User = require('../models/UserModel'); // Đảm bảo đường dẫn đ�
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const sendMail = require("../config/mailConfig"); 
 
 
 const register = async (req, res) => {
@@ -28,11 +29,31 @@ const register = async (req, res) => {
       });
 
       const savedUser = await newUser.save();
-      res.status(201).json({ message: 'User registered successfully', user: savedUser });
+       
+    //  Gửi email xác nhận đăng ký
+    await sendMail(email, "Đăng ký thành công!", 
+        `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2c3e50;">Chào mừng, ${username}! 👋</h2>
+        <p style="font-size: 16px;">Chúc mừng bạn đã đăng ký tài khoản thành công! 🎉</p>
+        <p style="font-size: 16px;">Hãy khám phá ứng dụng của chúng tôi và tận hưởng những trải nghiệm tuyệt vời.</p>
+        <br>
+        <p style="font-size: 14px; color: #888;">Nếu bạn có bất kỳ thắc mắc nào, hãy liên hệ với chúng tôi.</p>
+        <p style="font-size: 14px; color: #888;">Trân trọng,</p>
+        <p style="font-size: 14px; font-weight: bold; color: #2c3e50;">Đội ngũ hỗ trợ YourApp</p>
+    </div>`);
+  
+        // Trả về kết quả đăng ký thành công
+        res.status(201).json({
+          message: "User registered successfully. Check your email!",
+          user: savedUser,
+        });
+  
   } catch (err) {
       res.status(500).json({ message: 'Error registering user', error: err.message });
   }
 };
+
+
 
 const login = async (req, res) => {
     const { email, phoneNumber, password } = req.body;
@@ -63,6 +84,16 @@ const login = async (req, res) => {
         res.status(500).json({ message: 'Error logging in', error: err.message });
     }
   };
+  const googleAuth = async (req, res) => {
+    const token = generateToken(req.user);
+    res.redirect(`http://localhost:3000?token=${token}`);
+};
+
+const facebookAuth = async (req, res) => {
+    const token = generateToken(req.user);
+    res.redirect(`http://localhost:3000?token=${token}`);
+};
+
   const refreshAccessToken = async (req, res) => {
     const { refreshToken } = req.body;
     const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'default_refresh_secret_key';
@@ -77,7 +108,7 @@ const login = async (req, res) => {
         
         // Tạo một accessToken mới
         const secretKey = process.env.JWT_SECRET || 'default_secret_key';
-        const newToken = jwt.sign({ id: decoded.id, username: decoded.username, isadmin: decoded.isadmin }, secretKey, { expiresIn: '1h' });
+        const newToken = jwt.sign({ id: decoded.id, username: decoded.username,  isadmin: decoded.isadmin }, secretKey, { expiresIn: '1h' });
 
         res.json({ token: newToken });
     } catch (err) {
@@ -184,26 +215,83 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
+
         if (!token) {
+            console.log("Không tìm thấy token");
             return res.status(401).json({ message: 'Access denied. No token provided.' });
         }
-        // Giải mã token
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret_key');
+        console.log('Decoded Token:', decoded);
+
         const userIdFromToken = decoded.id;
-    
-        // Xóa người dùng
-        const deletedUser = await User.findByIdAndDelete({ _id: req.params.id });
-        if (!deletedUser) {
-            return res.status(404).json({ message: 'User not found' });
+        const isAdmin = decoded.isadmin;
+
+        console.log(' User ID from token:', userIdFromToken);
+        console.log(' Is Admin:', isAdmin);
+
+        let { id } = req.params;
+        console.log(" User ID từ request:", id);
+
+        // Nếu id = "me", gán id = userIdFromToken
+        if (id === "me") {
+            id = userIdFromToken;
         }
-        res.status(200).json({
-            message: 'User account deleted successfully',
-            user: deletedUser,
-        });
+
+        // Cho phép user xóa chính tài khoản của mình
+        if (id === userIdFromToken) {
+            console.log("Cho phép xóa tài khoản chính mình");
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                console.log("ID không hợp lệ:", id);
+                return res.status(400).json({ message: 'Invalid user ID' });
+            }
+
+            const deletedUser = await User.findByIdAndDelete(id);
+            if (!deletedUser) {
+                console.log("Không tìm thấy user để xóa");
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            console.log("User đã bị xóa:", deletedUser);
+            return res.status(200).json({
+                message: 'User account deleted successfully',
+                user: deletedUser,
+            });
+        }
+
+        // Nếu là admin, có quyền xóa bất kỳ user nào
+        if (isAdmin) {
+            console.log("Admin xóa user khác");
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                console.log("ID không hợp lệ:", id);
+                return res.status(400).json({ message: 'Invalid user ID' });
+            }
+
+            const deletedUser = await User.findByIdAndDelete(id);
+            if (!deletedUser) {
+                console.log("Không tìm thấy user để xóa");
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            console.log("Admin đã xóa user:", deletedUser);
+            return res.status(200).json({
+                message: 'Admin deleted user successfully',
+                user: deletedUser,
+            });
+        }
+
+        // Nếu không phải admin & không phải chủ tài khoản => Cấm xóa
+        console.log("Permission denied");
+        return res.status(403).json({ message: 'Permission denied' });
+
     } catch (error) {
+        console.log("Lỗi server:", error.message);
         res.status(500).json({ message: error.message });
     }
 };
+
 // Đăng xuất
 const logout = async (req, res) => {
     const { refreshToken } = req.body;
@@ -417,6 +505,8 @@ const removeFromWishlist = async (req, res) => {
 module.exports = {
   register,
   login,
+  googleAuth,
+  facebookAuth,
   changePassword,
   getUser,
   refreshAccessToken,

@@ -17,8 +17,11 @@ router.get('/usergrowth', UserController.getUserGrowth);
 router.get('/', UserController.getUserById);
 // Cập nhật thông tin người dùng
 router.put('/', UserController.updateUser);
-// Xóa tài khoản người dùng
+// Admin xóa bất kỳ user nào (không cần token)
 router.delete('/:id', UserController.deleteUser);
+
+// Xóa tài khoản người dùng cho user
+router.delete('/me',authenticateToken, UserController.deleteUser);
 // sản phẩm yêu thích của người dùng
 router.post('/wishlist/add', authenticateToken, UserController.addToWishlist);
 router.get('/wishlist', authenticateToken, UserController.getWishlist);
