@@ -3,6 +3,7 @@ const Product = require('../models/ProductModel');
 const SubCategory = require('../models/SubCategoryModel');
 const Type = require('../models/TypeModel')
 const Review = require('../models/ReviewModel');
+const Brand = require('../models/BrandModel');
 
 // Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
@@ -32,14 +33,21 @@ exports.createProduct = async (req, res) => {
     const existingSubCategory = await SubCategory.findById(subCategoryId);
     if (!existingSubCategory) {
      // console.log('ID_Type không tồn tại:', typeId);
-      return res.status(400).json({ message: 'Loại sản phẩm không tồn tại, không thể thêm sản phẩm' });
+      return res.status(400).json({ message: 'subcategory sản phẩm không tồn tại, không thể thêm sản phẩm' });
     }
 
     // Kiểm tra xem danh mục lớn có tồn tại không
     const existingType = await Type.findById(typeId);
     if (!existingType) {
       console.log('ID_Type không tồn tại:', typeId);
-      return res.status(400).json({ message: 'Loại sản phẩm không tồn tại, không thể thêm sản phẩm' });
+      return res.status(400).json({ message: 'Type sản phẩm không tồn tại, không thể thêm sản phẩm' });
+    }
+
+     // Kiểm tra xem thương hiệu có tồn tại không
+    const existingBrand = await Brand.findById(brandId);
+    if (!existingBrand) {
+      console.log('Brand không tồn tại:', brandId);
+      return res.status(400).json({ message: 'Thương hiệu không tồn tại, không thể thêm sản phẩm' });
     }
 
     // Tạo sản phẩm mới
