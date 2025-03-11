@@ -14,7 +14,7 @@ const Otp = require("../models/OTPModel"); // Đảm bảo đã import model OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const register = async (req, res) => {
-  const { username, email, phoneNumber, password, resPassword } = req.body;
+  const { username, email, password, resPassword } = req.body;
 
   if (password !== resPassword) {
     return res.status(400).json({ message: "Passwords do not match" });
@@ -36,7 +36,6 @@ const register = async (req, res) => {
     const newUser = new User({
       username,
       email,
-      phoneNumber,
       password: hashedPassword,
       isVerified: false, // Chưa kích hoạt
     });
