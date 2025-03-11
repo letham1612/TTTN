@@ -3,6 +3,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const sendMail = require("../utils/mailer"); 
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyToken,
+} = require("../utils/jwtUtils");
 const Otp = require("../models/OTPModel"); // Đảm bảo đã import model OTP
 
 
@@ -113,54 +118,97 @@ const login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
   
-        const secretKey = process.env.JWT_SECRET || 'default_secret_key';
-        const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'default_refresh_secret_key';
-  
-        const token = jwt.sign({ id: user._id, username: user.username, isadmin: user.isadmin }, secretKey, { expiresIn: '1h' });
-        const refreshToken = jwt.sign({ id: user._id, username: user.username, isadmin: user.isadmin }, refreshSecretKey, { expiresIn: '7d' });
-  
-        await user.save();
-        const responseStatus = user.isadmin ? 200 : 202;
-        res.status(responseStatus).json({
-            message: 'Login successful',
-            token,
-            refreshToken,
-        });
-    } catch (err) {
-        res.status(500).json({ message: 'Error logging in', error: err.message });
-    }
-  };
-  const googleAuth = async (req, res) => {
-    const token = generateToken(req.user);
-    res.redirect(`http://localhost:3000?token=${token}`);
-};
-
-const facebookAuth = async (req, res) => {
-    const token = generateToken(req.user);
-    res.redirect(`http://localhost:3000?token=${token}`);
-};
-
-  const refreshAccessToken = async (req, res) => {
-    const { refreshToken } = req.body;
-    const refreshSecretKey = process.env.JWT_REFRESH_SECRET || 'default_refresh_secret_key';
-
-    if (!refreshToken) {
-        return res.status(401).json({ message: 'Refresh token is required' });
-    }
-
-    try {
-        // Giải mã refreshToken và lấy user ID từ đó
-        const decoded = jwt.verify(refreshToken, refreshSecretKey);
-        
-        // Tạo một accessToken mới
-        const secretKey = process.env.JWT_SECRET || 'default_secret_key';
-        const newToken = jwt.sign({ id: decoded.id, username: decoded.username,  isadmin: decoded.isadmin }, secretKey, { expiresIn: '1h' });
-
-        res.json({ token: newToken });
-    } catch (err) {
-        res.status(403).json({ message: 'Invalid or expired refresh token', error: err.message });
-    }
-};
+         // Tạo token
+     // Tạo token
+     const token = generateAccessToken(user);
+     const refreshToken = generateRefreshToken(user);
+ 
+     // Gửi refreshToken qua cookie (bảo mật hơn)
+     res.cookie("refreshToken", refreshToken, {
+       httpOnly: true,
+       secure: process.env.NODE_ENV === "production", // Chỉ bật khi deploy HTTPS
+       sameSite: "Lax",
+       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+     });
+ 
+     res.status(200).json({
+       message: "Đăng nhập thành công",
+       token,
+       refreshToken,
+     });
+   } catch (err) {
+     res.status(500).json({ message: "Lỗi khi đăng nhập", error: err.message });
+   }
+ };
+ 
+ // 🟢 GOOGLE AUTH
+ const googleAuth = async (req, res) => {
+    console.log("User from Google:", req.user);
+   try {
+     if (!req.user) {
+       return res.status(401).json({ message: "Google authentication thất bại" });
+     }
+ 
+     const token = generateAccessToken(req.user);
+     const refreshToken = generateRefreshToken(req.user);
+ 
+     res.cookie("refreshToken", refreshToken, {
+       httpOnly: true,
+       secure: process.env.NODE_ENV === "production",
+       sameSite: "Lax",
+       maxAge: 7 * 24 * 60 * 60 * 1000,
+     });
+ 
+     res.redirect(`http://localhost:3000?token=${token}`);
+   } catch (err) {
+     res.status(500).json({ message: "Lỗi khi đăng nhập bằng Google", error: err.message });
+   }
+ };
+ 
+ // 🟢 FACEBOOK AUTH
+ const facebookAuth = async (req, res) => {
+   try {
+     if (!req.user) {
+       return res.status(401).json({ message: "Facebook authentication thất bại" });
+     }
+ 
+     const token = generateAccessToken(req.user);
+     const refreshToken = generateRefreshToken(req.user);
+ 
+     res.cookie("refreshToken", refreshToken, {
+       httpOnly: true,
+       secure: process.env.NODE_ENV === "production",
+       sameSite: "Lax",
+       maxAge: 7 * 24 * 60 * 60 * 1000,
+     });
+ 
+     res.redirect(`http://localhost:3000?token=${token}`);
+   } catch (err) {
+     res.status(500).json({ message: "Lỗi khi đăng nhập bằng Facebook", error: err.message });
+   }
+ };
+ 
+ // 🟢 REFRESH TOKEN
+ const refreshAccessToken = async (req, res) => {
+   const { refreshToken } = req.cookies;
+ 
+   if (!refreshToken) {
+     return res.status(401).json({ message: "Refresh token không hợp lệ" });
+   }
+ 
+   try {
+     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || "default_refresh_secret_key");
+ 
+     if (!decoded) {
+       return res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn" });
+     }
+ 
+     const newToken = generateAccessToken(decoded);
+     res.json({ token: newToken });
+   } catch (error) {
+     res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn" });
+   }
+ };
 
   
 const changePassword = async (req, res) => {

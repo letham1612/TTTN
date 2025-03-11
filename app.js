@@ -15,6 +15,8 @@ const subCategoryRoutes = require('./routes/subCategoryRoutes');
 const reviewRoutes = require("./routes/ReviewRoute");
 const multer = require("multer");
 const mongoose = require("mongoose");
+const passport = require("./config/passport"); 
+const session = require("express-session");
 require("dotenv").config()
 
 const app = express();
@@ -23,6 +25,20 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Cấu hình express-session
+app.use(
+  session({
+    secret: "your_secret_key", // Chuỗi bí mật để mã hóa session
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }, // 24h
+  })
+);
+
+// Khởi tạo Passport
+app.use(passport.initialize());
+app.use(passport.session()); 
 
 // Kết nối MongoDB
 const DB_URI = process.env.MONGODB_URI;
