@@ -6,6 +6,11 @@ const {
   authMiddleWare,
   authUserMiddleWare
 } = require("../middlewares/authMiddleware");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyToken,
+} = require("../utils/jwtUtils");
 const authenticateToken = require('../middlewares/authMiddleware');
 
 router.post('/register', UserController.register);
@@ -16,8 +21,28 @@ router.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    console.log("User session:", req.user); // Ghi log thông tin user session
-    res.json({ message: "Login successful!", user: req.user });
+    console.log("User after Google Auth:", req.user);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Google authentication failed" });
+    }
+
+    const token = generateAccessToken(req.user);
+    const refreshToken = generateRefreshToken(req.user);
+
+    console.log("Generated Access Token:", token);
+    console.log("Generated Refresh Token:", refreshToken);
+
+    res.json({
+      message: "Đăng nhập Google thành công",
+      token,
+      refreshToken,
+      user: {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+      },
+    });
   }
 );
 router.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));

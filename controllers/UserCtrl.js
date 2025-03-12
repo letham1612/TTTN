@@ -116,8 +116,6 @@ const login = async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
-  
-         // Tạo token
      // Tạo token
      const token = generateAccessToken(user);
      const refreshToken = generateRefreshToken(user);
@@ -140,31 +138,51 @@ const login = async (req, res) => {
    }
  };
  
- // 🟢 GOOGLE AUTH
+ //  GOOGLE AUTH
  const googleAuth = async (req, res) => {
-    console.log("User from Google:", req.user);
-   try {
-     if (!req.user) {
-       return res.status(401).json({ message: "Google authentication thất bại" });
-     }
+    try {
+      console.log("User from Google:", req.user);
+  
+      if (!req.user) {
+        return res.status(401).json({ message: "Google authentication thất bại" });
+      }
+  
+      const user = await User.findOne({ googleId: req.user.googleId });
+  
+      if (!user) {
+        return res.status(400).json({ message: "Người dùng chưa đăng ký với Google" });
+      }
+  
+      // Tạo token
+      const token = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+       console.log("Access Token:", token);
+        console.log("Refresh Token:", refreshToken);
+      // Lưu refreshToken vào cookie
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      });
+  
+      // Trả về token
+      res.status(200).json({
+        message: "Đăng nhập Google thành công",
+        token,
+        refreshToken,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Lỗi khi đăng nhập bằng Google", error: err.message });
+    }
+  };
  
-     const token = generateAccessToken(req.user);
-     const refreshToken = generateRefreshToken(req.user);
- 
-     res.cookie("refreshToken", refreshToken, {
-       httpOnly: true,
-       secure: process.env.NODE_ENV === "production",
-       sameSite: "Lax",
-       maxAge: 7 * 24 * 60 * 60 * 1000,
-     });
- 
-     res.redirect(`http://localhost:3000?token=${token}`);
-   } catch (err) {
-     res.status(500).json({ message: "Lỗi khi đăng nhập bằng Google", error: err.message });
-   }
- };
- 
- // 🟢 FACEBOOK AUTH
+ //  FACEBOOK AUTH
  const facebookAuth = async (req, res) => {
    try {
      if (!req.user) {
@@ -187,7 +205,7 @@ const login = async (req, res) => {
    }
  };
  
- // 🟢 REFRESH TOKEN
+ //  REFRESH TOKEN
  const refreshAccessToken = async (req, res) => {
    const { refreshToken } = req.cookies;
  
