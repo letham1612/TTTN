@@ -53,15 +53,19 @@ const register = async (req, res) => {
 
     // Gửi OTP qua email (gửi OTP gốc, không phải OTP đã băm)
 await sendMail(email, "Xác nhận đăng ký tài khoản", 
-    `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <h2 style="color: #2c3e50;">Chào mừng, ${username}!</h2>
-      <p>Chúng tôi rất vui khi bạn đăng ký tài khoản tại Beautique.</p>
-      <p>Mã OTP của bạn là: <strong style="font-size: 18px; color: #e74c3c;">${otp}</strong></p>
-      <p>Vui lòng nhập mã OTP này để hoàn tất đăng ký.</p>
-      <p><strong>Lưu ý:</strong> Mã OTP sẽ hết hạn sau <strong>5 phút</strong>.</p>
-      <br>
-      <p>Chúc bạn một ngày tốt lành! 💖</p>
-    </div>`);
+    `<div style="max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9f9f9;">
+  <div style="text-align: center;">
+    <h2 style="color: #2c3e50;">🎉 Chào mừng, ${username}!</h2>
+    <p style="font-size: 16px; color: #555;">Cảm ơn bạn đã đăng ký tài khoản tại <strong>Glowify cosmetic</strong>. Dưới đây là mã OTP của bạn:</p>
+    <div style="display: inline-block; padding: 12px 20px; font-size: 20px; font-weight: bold; color: #ffffff; background-color: #ff758c; border-radius: 5px; margin: 10px 0;">
+      ${otp}
+    </div>
+    <p style="font-size: 14px; color: #555;">Vui lòng nhập mã OTP này để hoàn tất đăng ký.</p>
+    <p style="font-size: 14px; color: #d35400;"><strong>Lưu ý:</strong> Mã OTP sẽ hết hạn sau <strong>5 phút</strong>.</p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+    <p style="font-size: 14px; color: #777;">Chúc bạn một ngày tuyệt vời! 💖</p>
+  </div>
+</div>`);
     res.status(201).json({ message: "OTP sent to email. Please verify your account." });
 
   } catch (err) {

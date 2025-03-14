@@ -8,7 +8,7 @@ const PaymentSchema = new mongoose.Schema({
     amount: { type: Number, required: true }, // Số tiền cần thanh toán
     orderInfo: { type: String, required: true }, // Thông tin đơn hàng
     paymentMethod: { type: String, default: "MoMo" }, // Phương thức thanh toán
-    paymentResult: { type: String, enum: ["success", "failure"], default: "pending" }, // Trạng thái thanh toán
+    paymentResult: { type: String, enum: ["success", "failure","pending"], default: "pending" }, // Trạng thái thanh toán
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     signature: { type: String }

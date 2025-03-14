@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 const sendMail = async (to, subject, htmlContent) => {
   try {
     await transporter.sendMail({
-      from: `"Your App" <${process.env.SMTP_USER}>`,
+      from: `"Glowify cosmetic" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html: htmlContent,
