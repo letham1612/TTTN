@@ -33,20 +33,54 @@ router.get(
     console.log("Generated Access Token:", token);
     console.log("Generated Refresh Token:", refreshToken);
 
-    // Lưu token vào cookie để frontend có thể lấy
-    res.cookie("accessToken", token, { httpOnly: true });
-    res.cookie("refreshToken", refreshToken, { httpOnly: true });
+    // Lưu token vào cookie an toàn
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+      secure: true,  // Chỉ gửi qua HTTPS (cần HTTPS trên production)
+      sameSite: "Strict",
+      maxAge: 15 * 60 * 1000, // 15 phút
+    });
 
-     // Chuyển hướng về trang chủ frontend (cổng 3001 với token
-     res.redirect(`http://localhost:3001/?token=${token}`);
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+    });
+
+    // Chuyển hướng về frontend mà không gửi token trên URL
+    res.redirect(`http://localhost:3001?token=${token}&refreshToken=${refreshToken}`);
   }
 );
+
 router.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));
 router.get("/auth/facebook/callback", passport.authenticate("facebook", { session: false }),  UserController.facebookAuth);
 router.post('/changePassword', UserController.changePassword);
 router.post('/logout',UserController.logout);
 router.get('/all', UserController.getUser);
-router.post('/refresh-token',UserController.refreshAccessToken);
+router.post("/refresh-token", (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Refresh token is required" });
+  }
+
+  try {
+    const user = verifyRefreshToken(refreshToken); // Giải mã refreshToken
+    const newAccessToken = generateAccessToken(user);
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 15 * 60 * 1000, // 15 phút
+    });
+
+    res.json({ message: "Token refreshed" });
+  } catch (error) {
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
+});
 router.get('/usergrowth', UserController.getUserGrowth);
 router.get('/', UserController.getUserById);
 // Cập nhật thông tin người dùng

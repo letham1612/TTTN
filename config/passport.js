@@ -81,10 +81,12 @@ passport.use(
 
 // 🟢 SESSION HANDLING
 passport.serializeUser((user, done) => {
+  console.log("Serialize User:", user);
   done(null, user.id);
 });
 
 passport.deserializeUser(async (id, done) => {
+   //console.log("Deserialize User:", id);
   try {
     const user = await User.findById(id);
     done(null, user);
