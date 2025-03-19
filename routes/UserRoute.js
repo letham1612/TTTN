@@ -33,16 +33,12 @@ router.get(
     console.log("Generated Access Token:", token);
     console.log("Generated Refresh Token:", refreshToken);
 
-    res.json({
-      message: "Đăng nhập Google thành công",
-      token,
-      refreshToken,
-      user: {
-        id: req.user._id,
-        username: req.user.username,
-        email: req.user.email,
-      },
-    });
+    // Lưu token vào cookie để frontend có thể lấy
+    res.cookie("accessToken", token, { httpOnly: true });
+    res.cookie("refreshToken", refreshToken, { httpOnly: true });
+
+     // Chuyển hướng về trang chủ frontend (cổng 3001 với token
+     res.redirect(`http://localhost:3001/?token=${token}`);
   }
 );
 router.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));
