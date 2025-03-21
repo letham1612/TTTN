@@ -55,6 +55,8 @@ router.get(
 
 router.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));
 router.get("/auth/facebook/callback", passport.authenticate("facebook", { session: false }),  UserController.facebookAuth);
+router.post("/forgot-password", UserController.forgotPassword);
+router.post("/reset-password", UserController.resetPassword);
 router.post('/changePassword', UserController.changePassword);
 router.post('/logout',UserController.logout);
 router.get('/all', UserController.getUser);
