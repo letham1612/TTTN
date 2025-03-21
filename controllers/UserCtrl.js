@@ -292,14 +292,19 @@ const forgotPassword = async (req, res) => {
 
         // Gửi OTP qua email
         await sendMail(email, "Khôi phục mật khẩu",
-            `<div style="max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; font-family: Arial, sans-serif; background-color: #f9f9f9;">
-                <h2>🔑 Khôi phục mật khẩu</h2>
-                <p>Mã OTP của bạn là:</p>
-                <div style="padding: 12px; font-size: 20px; font-weight: bold; color: #ffffff; background-color: #ff758c; border-radius: 5px; display: inline-block;">
-                    ${otp}
-                </div>
-                <p>Vui lòng nhập mã OTP này để đặt lại mật khẩu. Mã OTP sẽ hết hạn sau 5 phút.</p>
-            </div>`
+`<div style="max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; font-family: Arial, sans-serif; line-height: 1.6; background-color: #f9f9f9;">
+  <div style="text-align: center;">
+    <h2 style="color: #2c3e50; font-size: 24px;">🔑 Khôi phục mật khẩu</h2>
+    <p style="font-size: 16px; color: #555;">Mã OTP của bạn là:</p>
+    <div style="display: inline-block; padding: 12px 20px; font-size: 24px; font-weight: bold; color: #ffffff; background-color: #ff758c; border-radius: 5px; margin: 10px 0;">
+      ${otp}
+    </div>
+    <p style="font-size: 14px; color: #555;">Vui lòng nhập mã OTP này để đặt lại mật khẩu. Mã OTP sẽ hết hạn sau 5 phút.</p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+    <p style="font-size: 14px; color: #777;">Chúc bạn một ngày tuyệt vời! 💖</p>
+  </div>
+</div>`
+
         );
 
         res.status(200).json({ message: "OTP đã được gửi đến email của bạn" });
