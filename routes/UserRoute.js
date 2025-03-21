@@ -21,8 +21,6 @@ router.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    console.log("User after Google Auth:", req.user);
-
     if (!req.user) {
       return res.status(401).json({ message: "Google authentication failed" });
     }
@@ -30,26 +28,8 @@ router.get(
     const token = generateAccessToken(req.user);
     const refreshToken = generateRefreshToken(req.user);
 
-    console.log("Generated Access Token:", token);
-    console.log("Generated Refresh Token:", refreshToken);
-
-    // Lưu token vào cookie an toàn
-    res.cookie("accessToken", token, {
-      httpOnly: true,
-      secure: true,  // Chỉ gửi qua HTTPS (cần HTTPS trên production)
-      sameSite: "Strict",
-      maxAge: 15 * 60 * 1000, // 15 phút
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
-    });
-
-    // Chuyển hướng về frontend mà không gửi token trên URL
-    res.redirect(`http://localhost:3001?token=${token}&refreshToken=${refreshToken}`);
+    // Chuyển hướng về frontend với đầy đủ thông tin cần thiết
+    res.redirect(`http://localhost:3001/login?token=${token}&refreshToken=${refreshToken}&username=${req.user.username}&email=${req.user.email}`);
   }
 );
 
