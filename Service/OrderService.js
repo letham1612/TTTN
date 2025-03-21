@@ -192,10 +192,10 @@ const cancelOrder = async (orderId) => {
   }
 };
 
-//Admin xác nhận đơn hàng đang pending
+//Admin xác nhận đơn hàng đang peding
 const confirmOrder = async (orderId) => {
   try {
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).populate("products.productId");
     if (!order) {
       throw { status: 404, message: "Order not found" };
     }
@@ -204,16 +204,41 @@ const confirmOrder = async (orderId) => {
       throw { status: 400, message: "Only pending orders can be confirmed" };
     }
 
+    // Duyệt qua danh sách sản phẩm trong đơn hàng
+    for (const item of order.products) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        throw { status: 404, message: `Product ${item.productId} not found` };
+      }
+      if (!product.typeId) throw { status: 400, message: `Product ${product.name} is missing typeId` };
+
+      if (product.quantityInStock < item.quantity) {
+        throw { status: 400, message: `Not enough stock for ${product.name}` };
+      }
+      // Kiểm tra tồn kho
+      if (product.quantityInStock < item.quantity) {
+        throw { status: 400, message: `Not enough stock for ${product.name}` };
+      }
+
+      // Cập nhật tồn kho và số lượng đã bán
+      product.quantityInStock -= item.quantity;
+      product.sold += item.quantity;
+      await product.save();
+    }
+
+    // Cập nhật trạng thái đơn hàng
     order.status = "Confirmed";
     order.updatedAt = new Date();
-    
     await order.save();
-    return order;
+
+    return { status: "OK", message: "Order confirmed successfully", order };
   } catch (error) {
     console.error("Error in confirmOrder service:", error);
     throw { status: error.status || 500, message: error.message || "Internal server error" };
   }
 };
+
+
 
 //Admin xác nhận từ confirmed sang bên vận chuyển 
 const shipOrder = async (orderId) => {

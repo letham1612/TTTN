@@ -3,7 +3,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const FacebookStrategy = require("passport-facebook").Strategy;
 const User = require("../models/UserModel"); // Đảm bảo đúng đường dẫn đến model User
 
-// 🟢 GOOGLE STRATEGY
+// GOOGLE STRATEGY
 passport.use(
   new GoogleStrategy(
     {
@@ -41,7 +41,7 @@ passport.use(
   )
 );
 
-// 🟢 FACEBOOK STRATEGY
+// FACEBOOK STRATEGY
 passport.use(
   new FacebookStrategy(
     {
@@ -79,7 +79,7 @@ passport.use(
   )
 );
 
-// 🟢 SESSION HANDLING
+// SESSION HANDLING
 passport.serializeUser((user, done) => {
   console.log("Serialize User:", user);
   done(null, user.id);
