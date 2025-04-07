@@ -17,6 +17,8 @@ const multer = require("multer");
 const mongoose = require("mongoose");
 const passport = require("./config/passport"); 
 const session = require("express-session");
+const recommendationRoutes = require('./routes/recommendationRoutes');
+
 require("dotenv").config()
 
 const app = express();
@@ -60,6 +62,8 @@ app.use("/api/orders", OrderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use('/api', recommendationRoutes);
+
 
 // Cấu hình multer
 const storage = multer.diskStorage({

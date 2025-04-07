@@ -21,6 +21,8 @@ const ProductSchema = new mongoose.Schema({
     // Thêm trường mới
     ingredients: [{ type: String }], // Danh sách thành phần
     usageInstructions: { type: String }, // Hướng dẫn sử dụng
+    startTime: { type: Date },  // Thêm trường startTime
+  endTime: { type: Date },    // Thêm trường endTime
 }, 
 { timestamps: true });
 
