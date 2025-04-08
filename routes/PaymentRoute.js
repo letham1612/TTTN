@@ -6,6 +6,6 @@ const router = express.Router();
 
 // Route for initiating a payment
 router.post("/",authenticateToken, createPayment);
-router.post("/momo-ipn",authenticateToken, handleMomoIPN);
+router.post("/momo-ipn", handleMomoIPN);
 
 module.exports = router;
